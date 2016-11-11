@@ -8,7 +8,7 @@
 #include "afxdialogex.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
-#include <stdio.h>
+#include <cmath>
 
 using namespace std;
 using namespace cv;
@@ -75,6 +75,10 @@ BEGIN_MESSAGE_MAP(CImageProcessingDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON3, &CImageProcessingDlg::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CImageProcessingDlg::OnBnClickedButton4)
 	ON_BN_CLICKED(IDC_BUTTON5, &CImageProcessingDlg::OnBnClickedButton5)
+	ON_BN_CLICKED(IDC_BUTTON5, &CImageProcessingDlg::OnBnClickedButton5)
+	ON_BN_CLICKED(IDC_BUTTON6, &CImageProcessingDlg::OnBnClickedButton6)
+	ON_BN_CLICKED(IDC_BUTTON7, &CImageProcessingDlg::OnBnClickedButton7)
+	ON_BN_CLICKED(IDC_BUTTON8, &CImageProcessingDlg::OnBnClickedButton8)
 END_MESSAGE_MAP()
 
 
@@ -227,8 +231,8 @@ void CImageProcessingDlg::OnBnClickedButton1()
 	//to check if img is null
 	if (!img.data)
 	{
-	::MessageBox(NULL, __T("Loading Image Failed!"), __T("Error"), MB_OK);
-	return;
+		::MessageBox(NULL, __T("Loading Image Failed!"), __T("Error"), MB_OK);
+		return;
 	}
 	
 	namedWindow("Display Window", WINDOW_AUTOSIZE);
@@ -354,15 +358,16 @@ void CImageProcessingDlg::OnBnClickedButton3()
 	imshow("Flip Vertical", src1);
 }
 
-int sliderValue = 0;
+int sliderValue0 = 0;
 double sliderMax = 100.0;
 
-void OnBarChanged(int sliderValue, void*)
+void OnBlendedBarChanged(int sliderValue, void*)
 {
 	double alpha = (double)sliderValue / sliderMax;
 	double beta = 1.0 - alpha;
 	Mat dst;
 
+	//addWeighted(src0, src0 alpha, src1, src1 alpha, addtion value, output)
 	addWeighted(src0, alpha, src1, beta, 0.0, dst);
 	imshow("Blended Image", dst);
 }
@@ -385,15 +390,347 @@ void CImageProcessingDlg::OnBnClickedButton4()
 		flip(src0, src1, 1);
 
 	namedWindow("Blended Image", WINDOW_AUTOSIZE);
-	createTrackbar("Alpha Bar", "Blended Image", &sliderValue, sliderMax, OnBarChanged);
-	OnBarChanged(sliderValue, 0);
+	createTrackbar("Alpha Bar", "Blended Image", &sliderValue0, sliderMax, OnBlendedBarChanged);
+	OnBlendedBarChanged(sliderValue0, 0);
 }
 
+int colorMax = 255;
+int angleMax = 180;
+int sliderValue1 = 0;
+Mat src2, dst2, gradX, gradY, gradX1, gradY1, absGradX, absGradY;
+void OnThresholdBarChanged(int sliderValue, void*)
+{
+	Mat dst;
+
+	//threshold(input, output, threshold, max, type)
+	threshold(src2, dst, sliderValue, 255, THRESH_TOZERO);
+	
+	imshow("Sobel2 Image", dst);
+}
+
+double pi = atan(1) * 4;
+void OnAngleBarChanged(int sliderValue, void*)
+{
+	int width = src2.cols, height = src2.rows;
+	//double threshold = 1;
+
+	Mat dst(height, width, CV_8U);
+
+	//Canny(src2, dst, sliderValue - 20, sliderValue + 20, 3);
+	
+	//why cannot???
+	for (int i = 0; i < height; ++i)
+	{
+		short *dataX = gradX.ptr<short>(i), *dataY = gradY.ptr<short>(i);
+		uchar *dataD = dst.ptr<uchar>(i), *dataSrc2 = src2.ptr<uchar>(i);
+		for (int j = 0; j < width; ++j)
+		{
+			//int k = j * 2;
+			//double y = (int)dataY[k] + ((int)dataY[k + 1]) << 8;
+			//double x = (int)dataX[k]+ ((int)dataX[k + 1]) << 8;
+			double d = atan2(dataY[j], dataX[j]) * 180 / pi - sliderValue;
+			dataD[j] = (d < 20 && d >= -20) ? (uchar)dataSrc2[j] : (uchar)0;
+
+				//double d = atan((double)dataY[j]) / ((double)dataX[j]) * 180 / pi - sliderValue;
+				//dataD[j] = (d <= 20 && d >= -20) ? (uchar)255 : (uchar)0;
+		}
+	}
+	
+
+	imshow("Sobel Image", dst);
+}
 
 void CImageProcessingDlg::OnBnClickedButton5()
 {
 	// TODO: Add your control notification handler code here
+	// TODO: Add your control notification handler code here
 
 	//sobel edge detection
 
+	Mat img = imread("eye.jpg", CV_LOAD_IMAGE_COLOR);
+
+	if (img.empty())
+	{
+		::MessageBox(NULL, __T("Loading Image Failed!"), __T("Error"), MB_OK);
+		return;
+	}
+
+	namedWindow("Original Image", WINDOW_AUTOSIZE);
+	imshow("Original Image", img);
+
+	//to be converted to gray level
+	cvtColor(img, img, CV_RGB2GRAY);
+	//to do gaussian blur
+	GaussianBlur(img, img, Size(3, 3), 0, 0);
+
+	namedWindow("Smooth Image", WINDOW_AUTOSIZE);
+	imshow("Smooth Image", img);
+
+	//Sobel(input, output, depth, dx, dy, filter size, scale, delta
+	Sobel(img, gradX, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
+	//calculation => to get abs => converted to CV_8U
+	//convertScaleAbs(input, output, multiplication factor, addtion factor)
+	convertScaleAbs(gradX, absGradX);
+	//convertScaleAbs(gradX, gradX1);
+
+	Sobel(img, gradY, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+	convertScaleAbs(gradY, absGradY);
+	//convertScaleAbs(gradY, gradY1);
+
+	addWeighted(absGradX, 0.5, absGradY, 0.5, 0, src2);
+	
+	
+
+	/*
+	int height = img.rows, width = img.cols;
+	dst2 = Mat(height, width, CV_8U);
+	uint8_t *gradXPtr = gradX.data, *gradYPtr = gradY.data, *dst2Ptr = dst2.data;
+
+	for (int i = 0; i < height; ++i)
+	{
+		//only one channel
+		for (int j = 0; j < width; ++j)
+		{
+			dst2Ptr[i * width + j] = abs(gradXPtr[i * width + j]) * 0.5 + abs(gradYPtr[i * width + j]) * 0.5;
+		}
+	}
+	
+	namedWindow("Sobel");
+	imshow("Sobel", src2);
+	*/
+
+	/*
+	Mat test;
+	Sobel(img, test, CV_16S, 1, 1, 3, 1, 0, BORDER_DEFAULT);
+	imshow("Sobel1", test);
+	*/
+
+	namedWindow("Sobel Image");
+	createTrackbar("Angle Bar", "Sobel Image", &sliderValue1, angleMax, OnAngleBarChanged);
+	OnAngleBarChanged(sliderValue1, 0);
+
+	namedWindow("Sobel2 Image");
+	createTrackbar("Threshold Bar", "Sobel2 Image", &sliderValue0, colorMax, OnThresholdBarChanged);
+	OnThresholdBarChanged(sliderValue0, 0);
+}
+
+//Mat inputPoints(4, 2, CV_16U);
+Point2f inputPoints[4];
+Mat src3;
+int pointCount = 0;
+void OnMouse(int event, int x, int y, int flags, void* param)
+{
+	if (event == (int)EVENT_FLAG_LBUTTON)
+	{
+		//inputPoints.ptr<Vec2i>(pointCount)[0] = Vec2i(x, y);
+		inputPoints[pointCount] = Point2f(x, y);
+		if (++pointCount >= 4)
+		{
+			//to end
+			/*
+			Mat afterPoints(4, 2, CV_16U);
+			afterPoints.ptr<Vec2i>(0)[0] = Vec2i(20, 20);
+			afterPoints.ptr<Vec2i>(1)[0] = Vec2i(20, 450);
+			afterPoints.ptr<Vec2i>(2)[0] = Vec2i(450, 450);
+			afterPoints.ptr<Vec2i>(3)[0] = Vec2i(450, 20);
+			*/
+
+			Point2f afterPoints[4];
+			afterPoints[0] = Point2f(20, 20);
+			afterPoints[1] = Point2f(20, 450);
+			afterPoints[2] = Point2f(450, 450);
+			afterPoints[3] = Point2f(450, 20);
+
+			Mat perspectiveTransform = getPerspectiveTransform(inputPoints, afterPoints);
+			
+			Mat img;
+
+			warpPerspective(src3, img, perspectiveTransform, img.size());
+
+			imshow("New Qrcode", img);
+			pointCount = 0;
+		}
+	}
+}
+
+void CImageProcessingDlg::OnBnClickedButton6()
+{
+	// TODO: Add your control notification handler concode here
+	src3 = imread("QR.jpg", CV_LOAD_IMAGE_COLOR);
+	namedWindow("Original Qrcode", WINDOW_AUTOSIZE);
+	setMouseCallback("Original Qrcode", OnMouse, NULL);
+	imshow("Original Qrcode", src3);
+}
+
+void OnMouseByMyself(int event, int x, int y, int flags, void* param)
+{
+	if (event == (int)EVENT_FLAG_LBUTTON)
+	{
+		
+		inputPoints[pointCount] = Point2f(x, y);
+		if (++pointCount >= 4)
+		{
+			//to end
+
+			Point2f afterPoints[4];
+			afterPoints[0] = Point2f(20, 20);
+			afterPoints[1] = Point2f(20, 450);
+			afterPoints[2] = Point2f(450, 450);
+			afterPoints[3] = Point2f(450, 20);
+
+			/*
+			Mat A(8, 8, CV_32F), b(8, 1, CV_32F), x(8, 1, CV_32F);
+
+			int i;
+			for (i = 0; i < 4; ++i)
+			{
+				float *dataA =A.ptr<float>(i), *dataB = b.ptr<float>(i);
+				dataA[0] = inputPoints[i].x;
+				dataA[1] = inputPoints[i].y;
+				dataA[2] = 1;
+				dataA[3] = 0;
+				dataA[4] = 0;
+				dataA[5] = 0;
+				dataA[6] = -(inputPoints[i].x * afterPoints[i].x);
+				dataA[7] = -(inputPoints[i].y * afterPoints[i].x);
+				dataB[0] = afterPoints[i].x;
+			}
+
+			for (i = 0; i < 4; ++i)
+			{
+				float *dataA = A.ptr<float>(i + 4), *dataB = b.ptr<float>(i + 4);
+				dataA[0] = 0;
+				dataA[1] = 0;
+				dataA[2] = 0;
+				dataA[3] = inputPoints[i].x;
+				dataA[4] = inputPoints[i].y;
+				dataA[5] = 1;
+				dataA[6] = -(inputPoints[i].x * afterPoints[i].y);
+				dataA[7] = -(inputPoints[i].y * afterPoints[i].y);
+				dataB[0] = inputPoints[i].y;
+			}
+
+			solve(A, b, x, CV_LU);
+			::MessageBox(NULL, __T("YO"), __T("Error"), MB_OK);
+
+			Mat perspectiveTransform(3, 3, CV_32F);
+			for (int i = 0; i < 2; ++i)
+			{
+				//float *dataP = perspectiveTransform.ptr<float>(i);
+				for (int j = 0; j < 3; ++j)
+				{
+					//float *dataX = x.ptr<float>(i * 3 + j);
+					//dataP[j] = dataX[0];
+					perspectiveTransform.at<float>(i, j) = x.at<float>(i * 3 + j, 0);
+				}
+			}
+			perspectiveTransform.at<float>(2, 0) = x.at<float>(6, 0);
+			perspectiveTransform.at<float>(2, 1) = x.at<float>(7, 0);
+			perspectiveTransform.at<float>(2, 2) = 1;
+			*/
+
+			Mat perspectiveTransform = getPerspectiveTransform(afterPoints, inputPoints);
+
+			::MessageBox(NULL, __T("YO1"), __T("Error"), MB_OK);
+			int height = src3.rows, width = src3.cols, channel = src3.channels();
+			Mat img(height, width, src3.type());
+
+			for (int i = 0; i < height; ++i)
+			{
+				for (int j = 0; j < width; ++j)
+				{
+					Mat x(3, 1, CV_64F), r(3, 1, CV_64F);
+					x.at<double>(0, 0) = j;
+					x.at<double>(1, 0) = i;
+					x.at<double>(2, 0) = 1;
+
+					/*
+					for (int k = 0; k < 3; ++k)
+					{
+						float s = 0;
+						for (int l = 0; l < 3; ++l)
+						{
+							s += perspectiveTransform.at<float>(k, l) * x.at<ushort>(l, 0);
+						}
+
+						r.at<ushort>(k, 0) = (ushort)s;
+					}
+					*/
+
+					r = perspectiveTransform * x;
+
+					//::MessageBox(NULL, __T("YO2"), __T("Error"), MB_OK);
+					double x0 = r.at<double>(0, 0) / r.at<double>(2, 0);
+					double y0 = r.at<double>(1, 0) / r.at<double>(2, 0);
+					int x0Up = ceil(x0);
+					int y0Up = ceil(y0);
+					int x0Down = floor(x0);
+					int y0Down = floor(y0);
+
+					uchar *dataI = img.ptr<uchar>(i);
+					if (x0Up >= 0 && x0Down >= 0 && x0Up < height && x0Down < height && y0Up >= 0 && y0Down >= 0 && y0Up < width && y0Down < width)
+					{
+						uchar *dataSUp = src3.ptr<uchar>(y0Up), *dataSDown = src3.ptr<uchar>(y0Down);
+						for (int k = 0; k < 3; ++k)
+							dataI[j * 3 + k] = (dataSUp[x0Up * 3 + k] + dataSDown[x0Down * 3 + k]) / 2;
+					}
+					else
+					{
+						for (int k = 0; k < 3; ++k)
+							dataI[j * 3 + k] = 0;
+					}
+
+
+					/*
+					if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height)
+						for (int k = 0; k < 3; ++k)
+							img.at<uchar>(y0, x0 * 3 + k) = src3.at<uchar>(i, j * 3 + k);
+					*/
+					//::MessageBox(NULL, __T("YO3"), __T("Error"), MB_OK);
+				}
+			}
+
+			//warpPerspective(src3, img, perspectiveTransform, img.size());
+
+			imshow("New Qrcode", img);
+			pointCount = 0;
+		}
+	}
+}
+
+void CImageProcessingDlg::OnBnClickedButton7()
+{
+	// TODO: Add your control notification handler code here
+
+	//type: CV_8UC3
+	src3 = imread("QR.jpg", CV_LOAD_IMAGE_COLOR);
+	namedWindow("Original Qrcode", WINDOW_AUTOSIZE);
+	setMouseCallback("Original Qrcode", OnMouseByMyself, NULL);
+	imshow("Original Qrcode", src3);
+}
+
+
+void CImageProcessingDlg::OnBnClickedButton8()
+{
+	// TODO: Add your control notification handler code here
+	Mat img = imread("shoes.jpg", CV_LOAD_IMAGE_GRAYSCALE), rImg, gImg, lImg;
+
+	resize(img, rImg, Size(img.cols / 3, img.rows / 3));
+
+	threshold(rImg, gImg, 0, 255, THRESH_TOZERO | THRESH_OTSU);
+
+	imshow("Resize Image", rImg);
+
+	namedWindow("Global Threshold Image", WINDOW_AUTOSIZE);
+	imshow("Global Threshold Image", gImg);
+
+	adaptiveThreshold(rImg, lImg, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 133, -40);
+	imshow("Local Threshold Image", lImg);
+
+	GaussianBlur(lImg, lImg, Size(3, 3), 0, 0);
+	imshow("Gaussian Smooth Image", lImg);
+
+	medianBlur(lImg, lImg, 5);
+	imshow("Median Filter Image", lImg);
+	
 }
