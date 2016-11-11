@@ -114,17 +114,7 @@ BOOL CImageProcessingDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 設定小圖示
 
 	// TODO: 在此加入額外的初始設定
-
-	/*
-	FILE *stream;
-	AllocConsole();
-	freopen_s( &stream, "1.bmp", "r", stdout);
-	*/
-
 	//AllocConsole();
-
-
-
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
 
@@ -222,7 +212,6 @@ void CImageProcessingDlg::OnBnClickedButton1()
 	GetDlgItem(IDC_EDIT_RESOLUTION)->SetWindowTextW(resolution);
 	GetDlgItem(IDC_EDIT_DPI)->SetWindowTextW(dpi);
 	
-
 	//to display the img
 
 	//to load the bmp
@@ -235,57 +224,9 @@ void CImageProcessingDlg::OnBnClickedButton1()
 		return;
 	}
 	
-	namedWindow("Display Window", WINDOW_AUTOSIZE);
 	imshow("Display Window", img);
 
 	waitKey(0);
-
-
-	/*
-	GetDlgItem(IDC_EDIT2)->SetWindowTextW(L"YO");
-
-	//cv
-
-	
-	HBITMAP hBitmap = (HBITMAP)::LoadImage(NULL, IDB_BITMAP1, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-
-	if (hBitmap == NULL)
-	{
-		::MessageBox(NULL, __T("LoadImage Failed"), __T("Error"), MB_OK);
-		return;
-	}
-
-	HDC hLocalDC;
-	hLocalDC = ::CreateCompatibleDC(hWinDC);
-
-	if (hLocalDC == NULL)
-	{
-		::MessageBox(NULL, __T("CreateCompatibleDC Failed"), __T("Error"), MB_OK);
-		return;
-	}
-
-	BITMAP qBitmap;
-	int iReturn = GetObject(reinterpret_cast<HGDIOBJ>(hBitmap), sizeof(BITMAP), reinterpret_cast<LPVOID>(&qBitmap));
-
-	if (!iReturn)
-	{
-		::MessageBox(NULL, __T("GetObject Failed"), __T("Error"), MB_OK);
-	}
-
-	
-	CBitmap bmp;
-	bmp.LoadBitmapW(IDB_BITMAP1);
-	
-
-	
-	CDC *pDC = CDC::FromHandle(image.GetDC());
-
-	pDC->Rectangle(0, 40, 100, 50);
-	image.
-	*/
-
-
-	
 }
 
 
@@ -303,8 +244,7 @@ void CImageProcessingDlg::OnBnClickedButton2()
 		return;
 	}
 
-	namedWindow("Origin", WINDOW_AUTOSIZE);
-	imshow("Origin", img0);
+	imshow("Original Image", img0);
 	
 	int width = img0.cols, height = img0.rows;
 	//cout << img0.ptr<Vec3b>(0)[0] << endl;
@@ -326,8 +266,7 @@ void CImageProcessingDlg::OnBnClickedButton2()
 		}
 	}
 
-	namedWindow("Miscellaneous", WINDOW_AUTOSIZE);
-	imshow("Miscellaneous", img0);
+	imshow("Miscellaneous Image", img0);
 
 	waitKey(0);
 }
@@ -348,14 +287,12 @@ void CImageProcessingDlg::OnBnClickedButton3()
 		return;
 	}
 
-	namedWindow("Origin", WINDOW_AUTOSIZE);
-	imshow("Origin", src0);
+	imshow("Original Image", src0);
 
 	if(src1.empty())
 		flip(src0, src1, 1);
 
-	namedWindow("Flip Vertical", WINDOW_AUTOSIZE);
-	imshow("Flip Vertical", src1);
+	imshow("Flip Vertical Image", src1);
 }
 
 int sliderValue0 = 0;
@@ -397,7 +334,7 @@ void CImageProcessingDlg::OnBnClickedButton4()
 int colorMax = 255;
 int angleMax = 180;
 int sliderValue1 = 0;
-Mat src2, dst2, gradX, gradY, gradX1, gradY1, absGradX, absGradY;
+Mat src2, gradX, gradY;
 void OnThresholdBarChanged(int sliderValue, void*)
 {
 	Mat dst;
@@ -412,27 +349,16 @@ double pi = atan(1) * 4;
 void OnAngleBarChanged(int sliderValue, void*)
 {
 	int width = src2.cols, height = src2.rows;
-	//double threshold = 1;
-
 	Mat dst(height, width, CV_8U);
 
-	//Canny(src2, dst, sliderValue - 20, sliderValue + 20, 3);
-	
-	//why cannot???
 	for (int i = 0; i < height; ++i)
 	{
 		short *dataX = gradX.ptr<short>(i), *dataY = gradY.ptr<short>(i);
 		uchar *dataD = dst.ptr<uchar>(i), *dataSrc2 = src2.ptr<uchar>(i);
 		for (int j = 0; j < width; ++j)
 		{
-			//int k = j * 2;
-			//double y = (int)dataY[k] + ((int)dataY[k + 1]) << 8;
-			//double x = (int)dataX[k]+ ((int)dataX[k + 1]) << 8;
 			double d = atan2(dataY[j], dataX[j]) * 180 / pi - sliderValue;
 			dataD[j] = (d < 20 && d >= -20) ? (uchar)dataSrc2[j] : (uchar)0;
-
-				//double d = atan((double)dataY[j]) / ((double)dataX[j]) * 180 / pi - sliderValue;
-				//dataD[j] = (d <= 20 && d >= -20) ? (uchar)255 : (uchar)0;
 		}
 	}
 	
@@ -442,7 +368,6 @@ void OnAngleBarChanged(int sliderValue, void*)
 
 void CImageProcessingDlg::OnBnClickedButton5()
 {
-	// TODO: Add your control notification handler code here
 	// TODO: Add your control notification handler code here
 
 	//sobel edge detection
@@ -455,7 +380,6 @@ void CImageProcessingDlg::OnBnClickedButton5()
 		return;
 	}
 
-	namedWindow("Original Image", WINDOW_AUTOSIZE);
 	imshow("Original Image", img);
 
 	//to be converted to gray level
@@ -463,58 +387,30 @@ void CImageProcessingDlg::OnBnClickedButton5()
 	//to do gaussian blur
 	GaussianBlur(img, img, Size(3, 3), 0, 0);
 
-	namedWindow("Smooth Image", WINDOW_AUTOSIZE);
 	imshow("Smooth Image", img);
+
+	Mat absGradX, absGradY;
 
 	//Sobel(input, output, depth, dx, dy, filter size, scale, delta
 	Sobel(img, gradX, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
 	//calculation => to get abs => converted to CV_8U
 	//convertScaleAbs(input, output, multiplication factor, addtion factor)
 	convertScaleAbs(gradX, absGradX);
-	//convertScaleAbs(gradX, gradX1);
 
 	Sobel(img, gradY, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
 	convertScaleAbs(gradY, absGradY);
-	//convertScaleAbs(gradY, gradY1);
 
 	addWeighted(absGradX, 0.5, absGradY, 0.5, 0, src2);
 	
-	
-
-	/*
-	int height = img.rows, width = img.cols;
-	dst2 = Mat(height, width, CV_8U);
-	uint8_t *gradXPtr = gradX.data, *gradYPtr = gradY.data, *dst2Ptr = dst2.data;
-
-	for (int i = 0; i < height; ++i)
-	{
-		//only one channel
-		for (int j = 0; j < width; ++j)
-		{
-			dst2Ptr[i * width + j] = abs(gradXPtr[i * width + j]) * 0.5 + abs(gradYPtr[i * width + j]) * 0.5;
-		}
-	}
-	
-	namedWindow("Sobel");
-	imshow("Sobel", src2);
-	*/
-
-	/*
-	Mat test;
-	Sobel(img, test, CV_16S, 1, 1, 3, 1, 0, BORDER_DEFAULT);
-	imshow("Sobel1", test);
-	*/
-
 	namedWindow("Sobel Image");
-	createTrackbar("Angle Bar", "Sobel Image", &sliderValue1, angleMax, OnAngleBarChanged);
-	OnAngleBarChanged(sliderValue1, 0);
+	createTrackbar("Angle Bar", "Sobel Image", &sliderValue0, angleMax, OnAngleBarChanged);
+	OnAngleBarChanged(sliderValue0, 0);
 
 	namedWindow("Sobel2 Image");
-	createTrackbar("Threshold Bar", "Sobel2 Image", &sliderValue0, colorMax, OnThresholdBarChanged);
-	OnThresholdBarChanged(sliderValue0, 0);
+	createTrackbar("Threshold Bar", "Sobel2 Image", &sliderValue1, colorMax, OnThresholdBarChanged);
+	OnThresholdBarChanged(sliderValue1, 0);
 }
 
-//Mat inputPoints(4, 2, CV_16U);
 Point2f inputPoints[4];
 Mat src3;
 int pointCount = 0;
@@ -522,29 +418,18 @@ void OnMouse(int event, int x, int y, int flags, void* param)
 {
 	if (event == (int)EVENT_FLAG_LBUTTON)
 	{
-		//inputPoints.ptr<Vec2i>(pointCount)[0] = Vec2i(x, y);
 		inputPoints[pointCount] = Point2f(x, y);
 		if (++pointCount >= 4)
 		{
 			//to end
-			/*
-			Mat afterPoints(4, 2, CV_16U);
-			afterPoints.ptr<Vec2i>(0)[0] = Vec2i(20, 20);
-			afterPoints.ptr<Vec2i>(1)[0] = Vec2i(20, 450);
-			afterPoints.ptr<Vec2i>(2)[0] = Vec2i(450, 450);
-			afterPoints.ptr<Vec2i>(3)[0] = Vec2i(450, 20);
-			*/
-
 			Point2f afterPoints[4];
 			afterPoints[0] = Point2f(20, 20);
 			afterPoints[1] = Point2f(20, 450);
 			afterPoints[2] = Point2f(450, 450);
 			afterPoints[3] = Point2f(450, 20);
 
-			Mat perspectiveTransform = getPerspectiveTransform(inputPoints, afterPoints);
+			Mat perspectiveTransform = getPerspectiveTransform(inputPoints, afterPoints), img;
 			
-			Mat img;
-
 			warpPerspective(src3, img, perspectiveTransform, img.size());
 
 			imshow("New Qrcode", img);
@@ -566,12 +451,10 @@ void OnMouseByMyself(int event, int x, int y, int flags, void* param)
 {
 	if (event == (int)EVENT_FLAG_LBUTTON)
 	{
-		
 		inputPoints[pointCount] = Point2f(x, y);
 		if (++pointCount >= 4)
 		{
 			//to end
-
 			Point2f afterPoints[4];
 			afterPoints[0] = Point2f(20, 20);
 			afterPoints[1] = Point2f(20, 450);
@@ -631,7 +514,6 @@ void OnMouseByMyself(int event, int x, int y, int flags, void* param)
 
 			Mat perspectiveTransform = getPerspectiveTransform(afterPoints, inputPoints);
 
-			::MessageBox(NULL, __T("YO1"), __T("Error"), MB_OK);
 			int height = src3.rows, width = src3.cols, channel = src3.channels();
 			Mat img(height, width, src3.type());
 
@@ -644,24 +526,12 @@ void OnMouseByMyself(int event, int x, int y, int flags, void* param)
 					x.at<double>(1, 0) = i;
 					x.at<double>(2, 0) = 1;
 
-					/*
-					for (int k = 0; k < 3; ++k)
-					{
-						float s = 0;
-						for (int l = 0; l < 3; ++l)
-						{
-							s += perspectiveTransform.at<float>(k, l) * x.at<ushort>(l, 0);
-						}
-
-						r.at<ushort>(k, 0) = (ushort)s;
-					}
-					*/
-
 					r = perspectiveTransform * x;
 
-					//::MessageBox(NULL, __T("YO2"), __T("Error"), MB_OK);
 					double x0 = r.at<double>(0, 0) / r.at<double>(2, 0);
 					double y0 = r.at<double>(1, 0) / r.at<double>(2, 0);
+
+					//to get upper x0 y0 and lower x0 y0
 					int x0Up = ceil(x0);
 					int y0Up = ceil(y0);
 					int x0Down = floor(x0);
@@ -689,8 +559,6 @@ void OnMouseByMyself(int event, int x, int y, int flags, void* param)
 					//::MessageBox(NULL, __T("YO3"), __T("Error"), MB_OK);
 				}
 			}
-
-			//warpPerspective(src3, img, perspectiveTransform, img.size());
 
 			imshow("New Qrcode", img);
 			pointCount = 0;
@@ -732,5 +600,4 @@ void CImageProcessingDlg::OnBnClickedButton8()
 
 	medianBlur(lImg, lImg, 5);
 	imshow("Median Filter Image", lImg);
-	
 }
