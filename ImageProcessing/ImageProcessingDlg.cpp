@@ -514,22 +514,23 @@ void OnMouseByMyself(int event, int x, int y, int flags, void* param)
 
 			Mat perspectiveTransform = getPerspectiveTransform(afterPoints, inputPoints);
 
-			int height = src3.rows, width = src3.cols, channel = src3.channels();
+			int height = src3.rows, width = src3.cols, channel = src3.channels(), widthLength = width * channel;
 			Mat img(height, width, src3.type());
+			uint8_t *dataI = img.data, *dataSrc3 = src3.data;
 
 			for (int i = 0; i < height; ++i)
 			{
 				for (int j = 0; j < width; ++j)
 				{
 					Mat x(3, 1, CV_64F), r(3, 1, CV_64F);
-					x.at<double>(0, 0) = j;
-					x.at<double>(1, 0) = i;
-					x.at<double>(2, 0) = 1;
+					x.ptr<double>(0)[0] = j;
+					x.ptr<double>(1)[0] = i;
+					x.ptr<double>(2)[0] = 1;
 
 					r = perspectiveTransform * x;
 
-					double x0 = r.at<double>(0, 0) / r.at<double>(2, 0);
-					double y0 = r.at<double>(1, 0) / r.at<double>(2, 0);
+					double x0 = r.ptr<double>(0)[0] / r.ptr<double>(2)[0];
+					double y0 = r.ptr<double>(1)[0] / r.ptr<double>(2)[0];
 
 					//to get upper x0 y0 and lower x0 y0
 					int x0Up = ceil(x0);
@@ -537,19 +538,21 @@ void OnMouseByMyself(int event, int x, int y, int flags, void* param)
 					int x0Down = floor(x0);
 					int y0Down = floor(y0);
 
-					uchar *dataI = img.ptr<uchar>(i);
+					//uchar *dataI = img.ptr<uchar>(i);
+					int indexI = i * widthLength + j * channel, indexU = y0Up * widthLength + x0Up * channel, indexD = y0Down * widthLength + x0Down * channel;
 					if (x0Up >= 0 && x0Down >= 0 && x0Up < height && x0Down < height && y0Up >= 0 && y0Down >= 0 && y0Up < width && y0Down < width)
 					{
-						uchar *dataSUp = src3.ptr<uchar>(y0Up), *dataSDown = src3.ptr<uchar>(y0Down);
-						for (int k = 0; k < 3; ++k)
-							dataI[j * 3 + k] = (dataSUp[x0Up * 3 + k] + dataSDown[x0Down * 3 + k]) / 2;
+						//uchar *dataSUp = src3.ptr<uchar>(y0Up), *dataSDown = src3.ptr<uchar>(y0Down);
+						
+						for (int k = 0; k < channel; ++k)
+							dataI[indexI + k] = (dataSrc3[indexU + k] + dataSrc3[indexD + k]) * 0.5;
+							//dataI[indexI + k] = (dataSUp[indexU + k] + dataSDown[x0Down * channel + k]) * 0.5;
 					}
 					else
 					{
 						for (int k = 0; k < 3; ++k)
-							dataI[j * 3 + k] = 0;
+							dataI[indexI + k] = 0;
 					}
-
 
 					/*
 					if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height)
